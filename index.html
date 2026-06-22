@@ -1,0 +1,1084 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>全檢記錄表單</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+</head>
+<body>
+<div id="shoe-inspection-app"></div>
+
+<style>
+  #shoe-inspection-app {
+    --ink: #1f2620;
+    --paper: #fbfaf6;
+    --line: #d8d4c8;
+    --accent: #2f6f4e;
+    --accent-soft: #e7f1ea;
+    --warn: #b5482e;
+    --warn-soft: #fbeae5;
+    --muted: #6b6f63;
+    font-family: -apple-system, "PingFang TC", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    color: var(--ink);
+    background: var(--paper);
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 20px 18px 40px;
+    box-sizing: border-box;
+  }
+  #shoe-inspection-app * { box-sizing: border-box; }
+
+  .si-header { margin-bottom: 20px; }
+  .si-header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin: 0 0 4px;
+    letter-spacing: 0.01em;
+  }
+  .si-header p {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13.5px;
+  }
+
+  .si-banner {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 3px solid var(--accent);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: var(--muted);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  .si-tabs {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 18px;
+    border-bottom: 1px solid var(--line);
+  }
+  .si-tab {
+    flex: 1;
+    text-align: center;
+    padding: 10px 8px;
+    font-size: 14.5px;
+    font-weight: 600;
+    color: var(--muted);
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    cursor: pointer;
+    transition: color 0.15s, border-color 0.15s;
+  }
+  .si-tab.active {
+    color: var(--accent);
+    border-bottom-color: var(--accent);
+  }
+
+  .si-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+
+  .si-field { margin-bottom: 14px; }
+  .si-field:last-child { margin-bottom: 0; }
+  .si-field label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--ink);
+    margin-bottom: 6px;
+  }
+  .si-field .si-hint {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-left: 4px;
+  }
+  .si-field input, .si-field select {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 15px;
+    border: 1px solid var(--line);
+    border-radius: 7px;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: inherit;
+  }
+  .si-field input:focus, .si-field select:focus {
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+    border-color: var(--accent);
+  }
+  .si-field input.si-input-error, .si-field select.si-input-error {
+    border-color: var(--warn);
+  }
+
+  .si-row { display: flex; gap: 10px; }
+  .si-row .si-field { flex: 1; }
+
+  .si-submit {
+    width: 100%;
+    padding: 13px;
+    font-size: 15.5px;
+    font-weight: 700;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 6px;
+    transition: opacity 0.15s;
+  }
+  .si-submit:hover { opacity: 0.92; }
+
+  .si-msg {
+    text-align: center;
+    font-size: 13.5px;
+    margin-top: 12px;
+    padding: 10px;
+    border-radius: 7px;
+    display: none;
+  }
+  .si-msg.show { display: block; }
+  .si-msg.ok { color: var(--accent); background: var(--accent-soft); }
+  .si-msg.err { color: var(--warn); background: var(--warn-soft); }
+
+  .si-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .si-stat-box {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .si-stat-box .num {
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1.1;
+  }
+  .si-stat-box .label {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .si-section-title {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 4px 0 10px;
+    color: var(--ink);
+  }
+
+  .si-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    font-size: 13px;
+  }
+  .si-bar-label {
+    width: 84px;
+    flex-shrink: 0;
+    color: var(--ink);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .si-bar-track {
+    flex: 1;
+    height: 18px;
+    background: var(--accent-soft);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .si-bar-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.3s;
+  }
+  .si-bar-count {
+    width: 36px;
+    flex-shrink: 0;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  .si-table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: #fff;
+  }
+  table.si-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    min-width: 480px;
+  }
+  table.si-table th, table.si-table td {
+    text-align: left;
+    padding: 9px 10px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  table.si-table th {
+    background: var(--accent-soft);
+    color: var(--ink);
+    font-weight: 700;
+  }
+  table.si-table tr:last-child td { border-bottom: none; }
+  table.si-table td.si-num { text-align: right; font-weight: 600; }
+
+  .si-empty {
+    text-align: center;
+    color: var(--muted);
+    font-size: 13.5px;
+    padding: 30px 10px;
+  }
+
+  .si-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+    gap: 8px;
+  }
+  .si-toolbar .si-count {
+    font-size: 12.5px;
+    color: var(--muted);
+  }
+  .si-export-btn {
+    font-size: 12.5px;
+    padding: 7px 14px;
+    border: 1px solid var(--accent);
+    background: #fff;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--accent);
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .si-export-btn:hover { background: var(--accent-soft); }
+  .si-export-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .si-delete-btn {
+    font-size: 11.5px;
+    color: var(--warn);
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-decoration: underline;
+    padding: 0;
+  }
+
+  .si-progress-row {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .si-progress-row:last-child { border-bottom: none; }
+  .si-progress-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+    margin-bottom: 6px;
+    gap: 8px;
+  }
+  .si-progress-name {
+    font-weight: 700;
+    color: var(--ink);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .si-progress-nums {
+    flex-shrink: 0;
+    color: var(--muted);
+    font-size: 12.5px;
+  }
+  .si-progress-nums strong { color: var(--accent); }
+  .si-progress-track {
+    height: 14px;
+    background: var(--warn-soft);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .si-progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 4px;
+    transition: width 0.3s;
+  }
+  .si-progress-fill.si-progress-over {
+    background: #c8932b;
+  }
+  .si-progress-pct {
+    font-size: 11.5px;
+    color: var(--muted);
+    margin-top: 3px;
+    text-align: right;
+  }
+
+  .si-pill {
+    display: inline-block;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: 6px;
+  }
+  .si-pill.done { background: var(--accent-soft); color: var(--accent); }
+  .si-pill.pending { background: var(--warn-soft); color: var(--warn); }
+
+  @media (max-width: 460px) {
+    .si-stat-grid { gap: 6px; }
+    .si-stat-box { padding: 10px 4px; }
+</style>
+
+<div id="shoe-inspection-app"></div>
+
+<script>
+(function () {
+  // ===== Supabase connection =====
+  const SUPABASE_URL = 'https://pmklurkdbmxgpdgepbbp.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_wEE0dglwh0kFYnBPSzbgEg_HlGIUlyt';
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+  const root = document.getElementById('shoe-inspection-app');
+
+  // Data now lives in Supabase (records, intakes tables) so multiple
+  // people on different devices can share the same data via this URL.
+  let state = {
+    tab: 'form',
+    records: [],
+    intakes: [],
+    submitting: false,
+    loading: true,
+    loadError: null,
+  };
+
+  let pollTimer = null;
+
+  function todayStr() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function csvEscape(val) {
+    const s = String(val == null ? '' : val);
+    if (/[",\n]/.test(s)) {
+      return '"' + s.replace(/"/g, '""') + '"';
+    }
+    return s;
+  }
+
+  function downloadCsv(rows, filename) {
+    const header = ['日期', '檢驗雙數', '檢驗時長(分)', '秒/雙', '檢驗來源', '檢驗人'];
+    const lines = [header.map(csvEscape).join(',')];
+    rows.forEach((r) => {
+      const eff = (Number(r.duration) > 0 && Number(r.pairs) > 0)
+        ? ((Number(r.duration) * 60) / Number(r.pairs)).toFixed(2) : '';
+      lines.push([r.date, r.pairs, r.duration, eff, r.source, r.name].map(csvEscape).join(','));
+    });
+    const csvContent = '\uFEFF' + lines.join('\n'); // BOM for Excel CJK support
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  // ===== Supabase data access =====
+  async function fetchAll() {
+    state.loadError = null;
+    try {
+      const [recordsRes, intakesRes] = await Promise.all([
+        sb.from('records').select('*').order('created_at', { ascending: false }),
+        sb.from('intakes').select('*').order('created_at', { ascending: false }),
+      ]);
+      if (recordsRes.error) throw recordsRes.error;
+      if (intakesRes.error) throw intakesRes.error;
+
+      state.records = recordsRes.data.map((r) => ({
+        id: r.id,
+        pairs: r.pairs,
+        date: r.date,
+        duration: r.duration,
+        source: r.source,
+        intakeId: r.intake_id,
+        name: r.name,
+        createdAt: new Date(r.created_at).getTime(),
+      }));
+      state.intakes = intakesRes.data.map((i) => ({
+        id: i.id,
+        date: i.date,
+        store: i.store,
+        pairs: i.pairs,
+        createdAt: new Date(i.created_at).getTime(),
+      }));
+    } catch (e) {
+      console.error('Failed to fetch data', e);
+      state.loadError = (e && e.message) ? e.message : '資料讀取失敗';
+    }
+    state.loading = false;
+  }
+
+  async function addRecord(rec) {
+    const { error } = await sb.from('records').insert({
+      pairs: rec.pairs,
+      date: rec.date,
+      duration: rec.duration,
+      source: rec.source,
+      intake_id: rec.intakeId,
+      name: rec.name,
+    });
+    if (error) {
+      console.error('Failed to add record', error);
+      return { ok: false, error: error.message };
+    }
+    await fetchAll();
+    return { ok: true };
+  }
+
+  async function deleteRecord(id) {
+    const { error } = await sb.from('records').delete().eq('id', id);
+    if (error) {
+      console.error('Failed to delete record', error);
+      alert('刪除失敗：' + error.message);
+      return;
+    }
+    await fetchAll();
+    render();
+  }
+
+  async function addIntake(intake) {
+    const { error } = await sb.from('intakes').insert({
+      date: intake.date,
+      store: intake.store,
+      pairs: intake.pairs,
+    });
+    if (error) {
+      console.error('Failed to add intake', error);
+      return { ok: false, error: error.message };
+    }
+    await fetchAll();
+    return { ok: true };
+  }
+
+  async function deleteIntake(id) {
+    const { error } = await sb.from('intakes').delete().eq('id', id);
+    if (error) {
+      console.error('Failed to delete intake', error);
+      alert('刪除失敗：' + error.message);
+      return;
+    }
+    await fetchAll();
+    render();
+  }
+
+  function getIntakeOptions() {
+    const inspectedByIntakeId = {};
+    state.records.forEach((r) => {
+      if (r.intakeId) {
+        inspectedByIntakeId[r.intakeId] = (inspectedByIntakeId[r.intakeId] || 0) + (Number(r.pairs) || 0);
+      }
+    });
+    return [...state.intakes]
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .map((i) => {
+        const inspected = inspectedByIntakeId[i.id] || 0;
+        const remaining = (Number(i.pairs) || 0) - inspected;
+        return { ...i, inspected, remaining };
+      });
+  }
+
+  function renderFormTab() {
+    const intakeOptions = getIntakeOptions();
+    const sourceFieldHtml = intakeOptions.length > 0
+      ? `
+        <div class="si-field">
+          <label>檢驗來源 <span class="si-hint">（請選擇店家）</span></label>
+          <select id="si-source">
+            <option value="">請選擇進貨批次</option>
+            ${intakeOptions.map((i) => {
+              const label = `${i.date} ${i.store}`;
+              return `<option value="${i.id}">${escapeHtml(label)}</option>`;
+            }).join('')}
+          </select>
+          <div class="si-hint" style="display:block;margin-top:6px;">檢驗日期可以跟進貨日期不同，系統會依「批次」獨立計算進度，不受日期影響。</div>
+        </div>
+      `
+      : `
+        <div class="si-field">
+          <label>檢驗來源</label>
+          <input type="text" id="si-source-text" placeholder="尚未登記進貨批次" disabled />
+          <div class="si-hint" style="display:block;margin-top:6px;">尚未登記任何進貨批次，請先到「每日進貨」分頁登記店家與進貨雙數，這裡才能選擇對應批次。</div>
+        </div>
+      `;
+
+    return `
+      <div class="si-banner">
+        資料已連接共用資料庫，所有人透過這個網址填寫的紀錄會即時同步。畫面每 1 分鐘會自動更新一次，切換分頁或重新整理頁面也會立即更新。
+      </div>
+      <div class="si-card">
+        <form id="si-form">
+          <div class="si-field">
+            <label>檢驗鞋子雙數 <span class="si-hint">（共檢驗幾雙鞋）</span></label>
+            <input type="number" id="si-pairs" min="0" step="1" placeholder="例如：25" />
+          </div>
+          <div class="si-row">
+            <div class="si-field">
+              <label>檢驗日期</label>
+              <input type="date" id="si-date" />
+            </div>
+            <div class="si-field">
+              <label>檢驗時長 <span class="si-hint">（分鐘）</span></label>
+              <input type="number" id="si-duration" min="0" step="1" placeholder="例如：45" />
+            </div>
+          </div>
+          ${sourceFieldHtml}
+          <div class="si-field">
+            <label>檢驗人</label>
+            <input type="text" id="si-name" placeholder="您的姓名或代號" />
+          </div>
+          <button type="submit" class="si-submit" id="si-submit-btn" ${intakeOptions.length === 0 ? 'disabled' : ''}>送出紀錄</button>
+          <div class="si-msg" id="si-msg"></div>
+        </form>
+      </div>
+    `;
+  }
+
+  function renderIntakeTab() {
+    const sorted = [...state.intakes].sort((a, b) => b.createdAt - a.createdAt);
+    const rows = sorted.map((i) => `
+      <tr>
+        <td>${escapeHtml(i.date || '-')}</td>
+        <td>${escapeHtml(i.store || '-')}</td>
+        <td class="si-num">${escapeHtml(i.pairs)}</td>
+        <td><button class="si-delete-btn" data-intake-id="${i.id}">刪除</button></td>
+      </tr>
+    `).join('');
+
+    const listHtml = sorted.length > 0
+      ? `
+        <div class="si-card">
+          <div class="si-section-title">已登記的進貨紀錄</div>
+          <div class="si-table-wrap">
+            <table class="si-table">
+              <thead><tr><th>日期</th><th>店家</th><th>進貨雙數</th><th></th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
+          </div>
+        </div>
+      `
+      : `<div class="si-empty">尚未登記任何進貨紀錄。</div>`;
+
+    return `
+      <div class="si-banner">
+        登記每日各店家的進貨雙數，每次進貨會建立一個獨立批次，「檢驗來源」可以選擇對應批次，「即時統計」會依批次自動計算已驗/未驗雙數，不受日期影響。
+      </div>
+      <div class="si-card">
+        <form id="si-intake-form">
+          <div class="si-row">
+            <div class="si-field">
+              <label>進貨日期</label>
+              <input type="date" id="si-intake-date" />
+            </div>
+            <div class="si-field">
+              <label>進貨雙數</label>
+              <input type="number" id="si-intake-pairs" min="0" step="1" placeholder="例如：50" />
+            </div>
+          </div>
+          <div class="si-field">
+            <label>店家 <span class="si-hint">（建議用固定名稱，例如：A店）</span></label>
+            <input type="text" id="si-intake-store" placeholder="例如：A 店" />
+          </div>
+          <button type="submit" class="si-submit" id="si-intake-submit-btn">登記進貨</button>
+          <div class="si-msg" id="si-intake-msg"></div>
+        </form>
+      </div>
+      ${listHtml}
+    `;
+  }
+
+  function computeStats(records) {
+    const totalRecords = records.length;
+    const totalPairs = records.reduce((sum, r) => sum + (Number(r.pairs) || 0), 0);
+    const totalDuration = records.reduce((sum, r) => sum + (Number(r.duration) || 0), 0);
+    const avgSecPerPair = totalPairs > 0 ? ((totalDuration * 60) / totalPairs) : 0;
+
+    const sources = {};
+    records.forEach((r) => {
+      const key = r.source && r.source.trim() ? r.source.trim() : '（未填）';
+      sources[key] = (sources[key] || 0) + (Number(r.pairs) || 0);
+    });
+    const sourceList = Object.entries(sources).sort((a, b) => b[1] - a[1]);
+    const maxSourceVal = sourceList.length ? sourceList[0][1] : 0;
+
+    const byPerson = {};
+    records.forEach((r) => {
+      const key = r.name && r.name.trim() ? r.name.trim() : '（未填）';
+      if (!byPerson[key]) byPerson[key] = { name: key, count: 0, pairs: 0, duration: 0 };
+      byPerson[key].count += 1;
+      byPerson[key].pairs += (Number(r.pairs) || 0);
+      byPerson[key].duration += (Number(r.duration) || 0);
+    });
+    const personList = Object.values(byPerson).map((p) => ({
+      ...p,
+      secPerPair: p.pairs > 0 ? (p.duration * 60) / p.pairs : 0,
+    })).sort((a, b) => a.secPerPair === 0 ? 1 : b.secPerPair === 0 ? -1 : a.secPerPair - b.secPerPair);
+    const maxPersonPairs = personList.length ? Math.max(...personList.map((p) => p.pairs)) : 0;
+
+    const inspectedByIntakeId = {};
+    records.forEach((r) => {
+      if (r.intakeId) {
+        inspectedByIntakeId[r.intakeId] = (inspectedByIntakeId[r.intakeId] || 0) + (Number(r.pairs) || 0);
+      }
+    });
+
+    const progressList = state.intakes.map((i) => {
+      const inspected = inspectedByIntakeId[i.id] || 0;
+      const intakePairs = Number(i.pairs) || 0;
+      const remaining = intakePairs - inspected;
+      const pct = intakePairs > 0 ? Math.min(100, Math.round((inspected / intakePairs) * 100)) : 0;
+      return { date: i.date || '（未填日期）', store: i.store && i.store.trim() ? i.store.trim() : '（未填）', intakePairs, inspected, remaining, pct };
+    }).sort((a, b) => {
+      if (a.date !== b.date) return b.date.localeCompare(a.date);
+      return a.store.localeCompare(b.store, 'zh-Hant');
+    });
+
+    return { totalRecords, totalPairs, totalDuration, avgSecPerPair, sourceList, maxSourceVal, personList, maxPersonPairs, progressList };
+  }
+
+  function renderStatsTab() {
+    const { totalRecords, totalPairs, totalDuration, avgSecPerPair, sourceList, maxSourceVal, personList, maxPersonPairs, progressList } = computeStats(state.records);
+
+    if (totalRecords === 0 && progressList.length === 0) {
+      return `<div class="si-empty">目前還沒有任何紀錄，到「填寫表單」送出後，這裡會立即顯示統計結果。</div>`;
+    }
+
+    const progressHtml = progressList.length > 0
+      ? progressList.map((p) => {
+          const isDone = p.remaining <= 0 && p.intakePairs > 0;
+          const pillHtml = p.intakePairs > 0
+            ? (isDone ? `<span class="si-pill done">已驗完</span>` : `<span class="si-pill pending">未驗 ${p.remaining} 雙</span>`)
+            : '';
+          return `
+            <div class="si-progress-row">
+              <div class="si-progress-top">
+                <span class="si-progress-name">${escapeHtml(p.date)} · ${escapeHtml(p.store)}${pillHtml}</span>
+                <span class="si-progress-nums">已驗 <strong>${p.inspected}</strong> / 進貨 ${p.intakePairs} 雙</span>
+              </div>
+              <div class="si-progress-track">
+                <div class="si-progress-fill ${p.pct > 100 ? 'si-progress-over' : ''}" style="width:${Math.min(100, p.pct)}%"></div>
+              </div>
+              <div class="si-progress-pct">${p.pct}%</div>
+            </div>
+          `;
+        }).join('')
+      : `<div class="si-empty">尚未登記進貨資料，到「每日進貨」分頁登記後，這裡會顯示檢驗進度。</div>`;
+
+    const progressCardHtml = `
+      <div class="si-card">
+        <div class="si-section-title">檢驗進度（依進貨批次計算，不受日期影響）</div>
+        ${progressHtml}
+      </div>
+    `;
+
+    if (totalRecords === 0) {
+      return progressCardHtml;
+    }
+
+    const barsHtml = sourceList.map(([name, val]) => {
+      const pct = maxSourceVal > 0 ? Math.round((val / maxSourceVal) * 100) : 0;
+      return `
+        <div class="si-bar-row">
+          <div class="si-bar-label" title="${escapeHtml(name)}">${escapeHtml(name)}</div>
+          <div class="si-bar-track"><div class="si-bar-fill" style="width:${pct}%"></div></div>
+          <div class="si-bar-count">${val}</div>
+        </div>
+      `;
+    }).join('');
+
+    const personRows = personList.map((p) => {
+      const sec = p.secPerPair > 0 ? p.secPerPair.toFixed(2) : '-';
+      return `
+        <tr>
+          <td>${escapeHtml(p.name)}</td>
+          <td class="si-num">${p.count}</td>
+          <td class="si-num">${p.pairs}</td>
+          <td class="si-num">${p.duration}</td>
+          <td class="si-num"><strong>${sec}</strong></td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <div class="si-stat-grid">
+        <div class="si-stat-box">
+          <div class="num">${totalRecords}</div>
+          <div class="label">總紀錄筆數</div>
+        </div>
+        <div class="si-stat-box">
+          <div class="num">${totalPairs}</div>
+          <div class="label">總雙數</div>
+        </div>
+        <div class="si-stat-box">
+          <div class="num">${sourceList.length}</div>
+          <div class="label">來源數量</div>
+        </div>
+      </div>
+      <div class="si-stat-grid">
+        <div class="si-stat-box">
+          <div class="num">${totalDuration}</div>
+          <div class="label">總檢驗時長（分）</div>
+        </div>
+        <div class="si-stat-box">
+          <div class="num">${avgSecPerPair.toFixed(2)}</div>
+          <div class="label">平均每雙耗時（秒）</div>
+        </div>
+        <div class="si-stat-box">
+          <div class="num">${personList.length}</div>
+          <div class="label">檢驗人數</div>
+        </div>
+      </div>
+      ${progressCardHtml}
+      <div class="si-card">
+        <div class="si-section-title">檢驗人績效（依秒/雙排序，數字越小越快）</div>
+        <div class="si-table-wrap">
+          <table class="si-table">
+            <thead>
+              <tr>
+                <th>檢驗人</th><th>筆數</th><th>雙數</th><th>時長(分)</th><th>秒/雙</th>
+              </tr>
+            </thead>
+            <tbody>${personRows}</tbody>
+          </table>
+        </div>
+      </div>
+      <div class="si-card">
+        <div class="si-section-title">各來源雙數統計</div>
+        ${barsHtml}
+      </div>
+    `;
+  }
+
+  function renderListTab() {
+    if (state.records.length === 0) {
+      return `<div class="si-empty">尚無任何紀錄。送出表單後會顯示在這裡。</div>`;
+    }
+    const sorted = [...state.records].sort((a, b) => b.createdAt - a.createdAt);
+    const rows = sorted.map((r) => {
+      const eff = (Number(r.duration) > 0 && Number(r.pairs) > 0) ? ((Number(r.duration) * 60) / Number(r.pairs)).toFixed(2) : '-';
+      return `
+      <tr>
+        <td>${escapeHtml(r.date || '-')}</td>
+        <td class="si-num">${escapeHtml(r.pairs)}</td>
+        <td class="si-num">${escapeHtml(r.duration)}</td>
+        <td class="si-num">${eff}</td>
+        <td>${escapeHtml(r.source || '-')}</td>
+        <td>${escapeHtml(r.name || '-')}</td>
+        <td><button class="si-delete-btn" data-id="${r.id}">刪除</button></td>
+      </tr>
+    `;
+    }).join('');
+
+    return `
+      <div class="si-toolbar">
+        <span class="si-count">共 ${state.records.length} 筆紀錄</span>
+        <button class="si-export-btn" id="si-export-all-btn">匯出全部為 CSV</button>
+      </div>
+      <div class="si-table-wrap">
+        <table class="si-table">
+          <thead>
+            <tr>
+              <th>日期</th><th>雙數</th><th>時長(分)</th><th>秒/雙</th><th>來源</th><th>檢驗人</th><th></th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    `;
+  }
+
+  function render() {
+    if (state.loading) {
+      root.innerHTML = `
+        <div class="si-header"><h1>全檢記錄表單</h1></div>
+        <div class="si-empty">載入中...</div>
+      `;
+      return;
+    }
+
+    if (state.loadError) {
+      root.innerHTML = `
+        <div class="si-header"><h1>全檢記錄表單</h1></div>
+        <div class="si-msg err show">資料讀取失敗：${escapeHtml(state.loadError)}</div>
+      `;
+      return;
+    }
+
+    const tabsHtml = `
+      <div class="si-tabs">
+        <button class="si-tab ${state.tab === 'form' ? 'active' : ''}" data-tab="form">填寫表單</button>
+        <button class="si-tab ${state.tab === 'intake' ? 'active' : ''}" data-tab="intake">每日進貨</button>
+        <button class="si-tab ${state.tab === 'stats' ? 'active' : ''}" data-tab="stats">即時統計</button>
+        <button class="si-tab ${state.tab === 'list' ? 'active' : ''}" data-tab="list">紀錄列表</button>
+      </div>
+    `;
+
+    let bodyHtml = '';
+    if (state.tab === 'form') bodyHtml = renderFormTab();
+    else if (state.tab === 'intake') bodyHtml = renderIntakeTab();
+    else if (state.tab === 'stats') bodyHtml = renderStatsTab();
+    else bodyHtml = renderListTab();
+
+    root.innerHTML = `
+      <div class="si-header">
+        <h1>全檢記錄表單</h1>
+        <p>記錄檢驗雙數、檢驗時長與檢驗來源，即時統計檢驗效率與進度。所有人共用這個網址，資料即時同步。</p>
+      </div>
+      ${tabsHtml}
+      ${bodyHtml}
+    `;
+
+    attachEvents();
+  }
+
+  function attachEvents() {
+    root.querySelectorAll('.si-tab').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        state.tab = btn.dataset.tab;
+        state.loading = true;
+        render();
+        await fetchAll();
+        render();
+      });
+    });
+
+    const exportAllBtn = root.querySelector('#si-export-all-btn');
+    if (exportAllBtn) {
+      exportAllBtn.addEventListener('click', () => {
+        downloadCsv(state.records, '鞋子檢驗紀錄_彙總_' + todayStr() + '.csv');
+      });
+    }
+
+    root.querySelectorAll('.si-delete-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (confirm('確定要刪除這筆紀錄嗎？')) {
+          deleteRecord(btn.dataset.id);
+        }
+      });
+    });
+
+    const form = root.querySelector('#si-form');
+    if (form) {
+      const dateInput = root.querySelector('#si-date');
+      if (dateInput && !dateInput.value) dateInput.value = todayStr();
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (state.submitting) return;
+
+        const pairsEl = root.querySelector('#si-pairs');
+        const dateEl = root.querySelector('#si-date');
+        const durationEl = root.querySelector('#si-duration');
+        const sourceEl = root.querySelector('#si-source');
+        const nameEl = root.querySelector('#si-name');
+        const msgEl = root.querySelector('#si-msg');
+        const submitBtn = root.querySelector('#si-submit-btn');
+
+        [pairsEl, durationEl, nameEl].forEach((el) => el.classList.remove('si-input-error'));
+        if (sourceEl) sourceEl.classList.remove('si-input-error');
+
+        const pairs = pairsEl.value;
+        const date = dateEl.value;
+        const duration = durationEl.value;
+        const intakeId = sourceEl ? sourceEl.value : '';
+        const name = nameEl.value.trim();
+
+        const errors = [];
+        if (pairs === '' || isNaN(Number(pairs)) || Number(pairs) < 0) {
+          errors.push('檢驗雙數');
+          pairsEl.classList.add('si-input-error');
+        }
+        if (duration === '' || isNaN(Number(duration)) || Number(duration) < 0) {
+          errors.push('檢驗時長');
+          durationEl.classList.add('si-input-error');
+        }
+        if (!intakeId) {
+          errors.push('檢驗來源（進貨批次）');
+          if (sourceEl) sourceEl.classList.add('si-input-error');
+        }
+        if (!name) {
+          errors.push('檢驗人');
+          nameEl.classList.add('si-input-error');
+        }
+
+        if (errors.length > 0) {
+          msgEl.textContent = '請填寫：' + errors.join('、');
+          msgEl.className = 'si-msg err show';
+          return;
+        }
+
+        const matchedIntake = state.intakes.find((i) => i.id === intakeId);
+        const source = matchedIntake ? matchedIntake.store : '（未知批次）';
+
+        if (matchedIntake) {
+          const intakeOptions = getIntakeOptions();
+          const matchedOption = intakeOptions.find((i) => i.id === intakeId);
+          const remaining = matchedOption ? matchedOption.remaining : (Number(matchedIntake.pairs) || 0);
+          if (Number(pairs) > remaining) {
+            msgEl.textContent = `❌ 檢驗雙數（${Number(pairs)} 雙）超過該批次剩餘可驗雙數（剩 ${remaining} 雙），請確認後再送出。`;
+            msgEl.className = 'si-msg err show';
+            pairsEl.classList.add('si-input-error');
+            return;
+          }
+        }
+
+        state.submitting = true;
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '送出中...'; }
+
+        const result = await addRecord({
+          pairs: Number(pairs),
+          date,
+          duration: Number(duration),
+          source,
+          intakeId,
+          name,
+        });
+
+        state.submitting = false;
+
+        if (result.ok) {
+          render();
+          const newMsgEl = root.querySelector('#si-msg');
+          if (newMsgEl) {
+            newMsgEl.textContent = '✅ 送出成功！感謝填寫。';
+            newMsgEl.className = 'si-msg ok show';
+          }
+          const newDateEl = root.querySelector('#si-date');
+          if (newDateEl) newDateEl.value = todayStr();
+        } else {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '送出紀錄'; }
+          msgEl.textContent = '❌ 送出失敗：' + (result.error || '請稍候再試一次');
+          msgEl.className = 'si-msg err show';
+        }
+      });
+    }
+
+    const intakeForm = root.querySelector('#si-intake-form');
+    if (intakeForm) {
+      const intakeDateInput = root.querySelector('#si-intake-date');
+      if (intakeDateInput && !intakeDateInput.value) intakeDateInput.value = todayStr();
+
+      intakeForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+
+        const dateEl = root.querySelector('#si-intake-date');
+        const pairsEl = root.querySelector('#si-intake-pairs');
+        const storeEl = root.querySelector('#si-intake-store');
+        const msgEl = root.querySelector('#si-intake-msg');
+        const submitBtn = root.querySelector('#si-intake-submit-btn');
+
+        [dateEl, pairsEl, storeEl].forEach((el) => el.classList.remove('si-input-error'));
+
+        const date = dateEl.value;
+        const pairs = pairsEl.value;
+        const store = storeEl.value.trim();
+
+        const errors = [];
+        if (!date) {
+          errors.push('進貨日期');
+          dateEl.classList.add('si-input-error');
+        }
+        if (pairs === '' || isNaN(Number(pairs)) || Number(pairs) < 0) {
+          errors.push('進貨雙數');
+          pairsEl.classList.add('si-input-error');
+        }
+        if (!store) {
+          errors.push('店家');
+          storeEl.classList.add('si-input-error');
+        }
+
+        if (errors.length > 0) {
+          msgEl.textContent = '請填寫：' + errors.join('、');
+          msgEl.className = 'si-msg err show';
+          return;
+        }
+
+        if (submitBtn) { submitBtn.disabled = true; submitBtn.textContent = '登記中...'; }
+
+        const result = await addIntake({ date, pairs: Number(pairs), store });
+
+        if (result.ok) {
+          render();
+          const newMsgEl = root.querySelector('#si-intake-msg');
+          if (newMsgEl) {
+            newMsgEl.textContent = '✅ 已登記進貨資料！';
+            newMsgEl.className = 'si-msg ok show';
+          }
+        } else {
+          if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '登記進貨'; }
+          msgEl.textContent = '❌ 登記失敗：' + (result.error || '請稍候再試一次');
+          msgEl.className = 'si-msg err show';
+        }
+      });
+    }
+
+    root.querySelectorAll('[data-intake-id]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (confirm('確定要刪除這筆進貨紀錄嗎？')) {
+          deleteIntake(btn.dataset.intakeId);
+        }
+      });
+    });
+  }
+
+  async function init() {
+    render();
+    await fetchAll();
+    render();
+
+    // Poll every 8 seconds so other people's submissions show up automatically.
+    pollTimer = setInterval(async () => {
+      await fetchAll();
+      render();
+    }, 60000);
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
+
